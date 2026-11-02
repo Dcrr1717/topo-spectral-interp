@@ -54,19 +54,38 @@ def signal_matrix(rf: RunFeatures, views: List[str], site: str) -> np.ndarray:
     return np.hstack(cols)
 
 
+@dataclass
+class PhaseThresholds:
+    """Accuracy thresholds that define the phases (config key ``phases``)."""
+
+    mem: float = 0.99          # train accuracy: memorized
+    onset: float = 0.5         # held-out accuracy: generalization has started
+    grok: float = 0.9          # held-out accuracy: grokked (transition time)
+    grokked_min: float = 0.95  # held-out accuracy for the "grokked" class (Exp. 2)
+
+
+THRESHOLDS = PhaseThresholds()
+
+
+def set_phase_thresholds(**kw: float) -> None:
+    """Override the defaults (called once by ``tsi.run`` from the config)."""
+    global THRESHOLDS
+    THRESHOLDS = PhaseThresholds(**kw)
+
+
 @dataclass(frozen=True)
 class Phases:
     """Checkpoint indices of the phase boundaries of one run (None = never)."""
 
-    i_mem: Optional[int]     # first train accuracy >= mem_thr
-    i_grok50: Optional[int]  # first held-out accuracy >= 0.5
-    i_grok90: Optional[int]  # first held-out accuracy >= grok_thr
+    i_mem: Optional[int]     # first train accuracy >= THRESHOLDS.mem
+    i_grok50: Optional[int]  # first held-out accuracy >= THRESHOLDS.onset (0.5)
+    i_grok90: Optional[int]  # first held-out accuracy >= THRESHOLDS.grok (0.9)
 
     @property
     def grokked(self) -> bool:
         """Delayed generalization: memorized first (held-out accuracy still
-        < 0.5 when train accuracy reaches the threshold), then held-out
-        accuracy >= grok_thr. Runs that generalize while memorizing are not
+        below the onset threshold, 0.5, when train accuracy reaches 0.99),
+        then held-out accuracy >= the grok threshold (0.9). Runs that generalize while memorizing are not
         grokking runs: their post-memorization window starts after the
         transition."""
         return (self.i_mem is not None and self.i_grok90 is not None
@@ -78,18 +97,19 @@ def _first(mask: np.ndarray) -> Optional[int]:
     return int(hit[0]) if len(hit) else None
 
 
-def run_phases(rf: RunFeatures, mem_thr: float = 0.99, grok_thr: float = 0.9) -> Phases:
+def run_phases(rf: RunFeatures) -> Phases:
+    th = THRESHOLDS
     tr, te = rf.curves["train_acc"], rf.curves["test_acc"]
-    return Phases(i_mem=_first(tr >= mem_thr), i_grok50=_first(te >= 0.5),
-                  i_grok90=_first(te >= grok_thr))
+    return Phases(i_mem=_first(tr >= th.mem), i_grok50=_first(te >= th.onset),
+                  i_grok90=_first(te >= th.grok))
 
 
-def phase_labels(rf: RunFeatures, mem_thr: float = 0.99, memorized_test_max: float = 0.5,
-                 grokked_test_min: float = 0.95) -> np.ndarray:
-    """Per checkpoint: 0 = memorized (train >= mem_thr, held-out < 0.5),
-    1 = grokked (train >= mem_thr, held-out >= 0.95), -1 = neither."""
+def phase_labels(rf: RunFeatures) -> np.ndarray:
+    """Per checkpoint: 0 = memorized (train >= 0.99, held-out < 0.5),
+    1 = grokked (train >= 0.99, held-out >= 0.95), -1 = neither (defaults)."""
+    th = THRESHOLDS
     tr, te = rf.curves["train_acc"], rf.curves["test_acc"]
     lab = np.full(len(tr), -1, dtype=int)
-    lab[(tr >= mem_thr) & (te < memorized_test_max)] = 0
-    lab[(tr >= mem_thr) & (te >= grokked_test_min)] = 1
+    lab[(tr >= th.mem) & (te < th.onset)] = 0
+    lab[(tr >= th.mem) & (te >= th.grokked_min)] = 1
     return lab

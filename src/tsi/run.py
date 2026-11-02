@@ -122,7 +122,9 @@ def run_summary(runs: List[RunFeatures]) -> List[Dict[str, Any]]:
     for r in runs:
         ph = run_phases(r)
         rows.append({"run_id": r.meta["run_id"], "op": r.meta["op"], "kind": r.meta["kind"],
-                     "seed": r.meta["seed"], "final_train_acc": float(r.curves["train_acc"][-1]),
+                     "seed": r.meta["seed"], "train_frac": r.meta.get("train_frac"),
+                     "weight_decay": r.meta.get("weight_decay"),
+                     "final_train_acc": float(r.curves["train_acc"][-1]),
                      "final_test_acc": float(r.curves["test_acc"][-1]),
                      "t_mem": int(r.steps[ph.i_mem]) if ph.i_mem is not None else None,
                      "t_grok50": int(r.steps[ph.i_grok50]) if ph.i_grok50 is not None else None,
@@ -138,6 +140,8 @@ def main(argv: List[str] | None = None) -> Dict[str, Any]:
     ap.add_argument("--no-figures", action="store_true")
     args = ap.parse_args(argv)
     cfg = load_config(args.config)
+    from .featuresets import set_phase_thresholds
+    set_phase_thresholds(**cfg.get("phases", {}))
     out_dir = Path(cfg.get("out_dir", "results"))
     out_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
