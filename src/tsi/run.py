@@ -138,12 +138,19 @@ def main(argv: List[str] | None = None) -> Dict[str, Any]:
     ap.add_argument("--config", required=True)
     ap.add_argument("--verbose", action="store_true")
     ap.add_argument("--no-figures", action="store_true")
+    ap.add_argument("--figures-only", action="store_true",
+                    help="redraw figures from results.json and the cached runs")
     args = ap.parse_args(argv)
     cfg = load_config(args.config)
     from .featuresets import set_phase_thresholds
     set_phase_thresholds(**cfg.get("phases", {}))
     out_dir = Path(cfg.get("out_dir", "results"))
     out_dir.mkdir(parents=True, exist_ok=True)
+    if args.figures_only:
+        from .figures import make_figures
+        saved: Dict[str, Any] = json.loads((out_dir / "results.json").read_text())
+        make_figures(collect_runs(cfg), saved, out_dir / "figures")
+        return saved
     t0 = time.time()
     runs = collect_runs(cfg, verbose=args.verbose)
     t_runs = time.time() - t0

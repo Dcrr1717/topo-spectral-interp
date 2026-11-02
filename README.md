@@ -28,7 +28,30 @@ norm.
    memorized-vs-grokked from the activations? Evaluation uses grouped CV by
    training run, margins and bootstrap CIs, exactly as in the GEM benchmark.
 
-**Results:** see [`docs/RESULTS.md`](docs/RESULTS.md) (verdicts and
+## Results in brief: NO-GO on both experiments
+
+The setup is 15 runs (p = 59; add / sub / div; 4 seeds each, plus 3
+weight-decay-0 controls). 11 runs grokked, between steps 450 and 4800.
+
+| | best topology | best baseline | margin [95 % CI] | verdict |
+|---|---|---|---|---|
+| Locate the transition (timing error, lower is better) | X3 0.068 | CKA to final 0.083 | +0.015 [-0.017, +0.052] | tie |
+| Step cleanness (R^2) | X1 0.49 | probe 0.77 | -0.28 | worse |
+| Early warning (R^2 of steps-to-grok) | X2 -0.44 | weight norm -0.08 | n.s. | nothing works |
+| Layer / task / phase accuracy | 0.89 / 0.61 / 0.85 | 0.98 / 0.66 / 0.95 | -0.09 / -0.05 / -0.10 | worse / tie / worse |
+| Topology added to all baselines (best task) | 0.977 | 0.967 | +0.010 [+0.000, +0.022] | < +0.05 |
+
+The descriptor clearly sees grokking, but no better than the baselines:
+- X3 has the lowest timing error of all signals, but the margin is not
+  significant.
+- Its trajectories are noisier, and they step just as much in non-grokking
+  controls.
+- Its clearest effect, rising unit correlation in the embedding, is mirrored
+  by a plain PCA effective dimension.
+
+Topology ties the baselines; that is the result.
+
+**Details:** see [`docs/RESULTS.md`](docs/RESULTS.md) (verdicts and
 interpretation) and [`results/results.md`](results/results.md) (every number).
 Background, method and references: [`docs/SCIENCE.md`](docs/SCIENCE.md).
 Figures: [`results/figures/`](results/figures/).

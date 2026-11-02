@@ -65,6 +65,10 @@ operations come from the task list of Power et al.:
 | `sub` | a - b mod p | p^2 |
 | `div` | a * b^-1 mod p (Fermat inverse; b != 0) | p(p - 1) |
 
+Train fraction: 0.5 (`add`), 0.6 (`sub`), 0.55 (`div`). It was calibrated
+per operation in pilot runs so that each one shows delayed generalization
+within 6000 CPU steps (RESULTS.md, "Pilot").
+
 `mul` (a * b with all pairs, including the zero row and column) is
 implemented. It was dropped after pilot runs: its held-out accuracy rose
 gradually, alongside train accuracy, with no memorization plateau, so it is
@@ -92,7 +96,18 @@ sites:
 
 **Controls.** Runs with weight decay 0 memorize but do not grok in the budget.
 They test specificity: a detector that "finds a transition" there is not
-specific to grokking.
+specific to grokking. The controls differ from the grokking runs in weight
+decay as well as in outcome, so magnitude differences between the two groups
+cannot separate "grokked" from "trained with weight decay".
+
+**Phase thresholds** (config key `phases`, defaults):
+- memorized: train accuracy >= 0.99;
+- generalization onset: held-out accuracy >= 0.5;
+- grokked: held-out accuracy >= 0.9;
+- the "grokked" class of Experiment 2: held-out accuracy >= 0.95.
+
+A grokking run must show *delayed* generalization: held-out accuracy still
+below the onset threshold when memorization completes.
 
 ## 4. The descriptor (authentic, ported verbatim)
 
@@ -164,6 +179,8 @@ These are deliberately strong, label-adjacent baselines.
     accuracy < 0.5), regress the number of steps until held-out accuracy
     reaches 0.9. Ridge and random forest, leave-one-run-out, out-of-fold
     R^2. Training step (`epoch`) is an extra trivial baseline here.
+  - *Lead*: 10 % / 50 % onsets of each signal relative to those of
+    held-out accuracy (descriptive).
   - *Specificity*: step R^2 on the non-grokking controls.
 
 ### Experiment 2: discrimination
@@ -191,10 +208,20 @@ The 95 % CI of each margin comes from a bootstrap over training runs.
 
 - **GO vs baselines:** the best topological view (X1, X2, X1+X2, X3) beats
   the best single baseline by >= +0.05, with the CI above 0.
-- **GO incremental:** `baselines_union` + topology beats `baselines_union` by
+- **GO incremental:** topology added to the baselines beats them by
   >= +0.05, with the CI above 0. Does topology add signal the baselines miss?
+  - In Experiment 1 this is (best baseline + topology) vs the best baseline.
+    A concatenation of heterogeneous baselines is a *worse* change-point
+    detector than its best member, so beating `baselines_union` there would
+    prove nothing. The union comparison is reported as a secondary row.
+  - In Experiment 2 it is `baselines_union` + topology vs `baselines_union`,
+    as in GEM; a classifier can ignore useless columns.
 - **Headroom** = 1 - accuracy(`baselines_union`). If it is below 0.05, an
   incremental GO is arithmetically impossible, and we say so.
+
+In Experiment 2, the training step alone (`epoch`) is shown as a trivial
+reference. It shows how much of a task is solvable from "how far into
+training" alone.
 
 Choosing the best of several topological views is optimistic for topology.
 Choosing the best of several baselines is optimistic for the baselines. Both

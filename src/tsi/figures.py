@@ -220,7 +220,7 @@ def fig_detection(det: Dict[str, Any], path: Path) -> None:
     ax.invert_yaxis()
     ax.set_xlabel("step R^2 (1 = perfect single step)")
     ax.set_title("Cleanness of the transition and specificity")
-    ax.legend(fontsize=7, loc="lower right")
+    ax.legend(fontsize=7, loc="upper right")
     fig.tight_layout()
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
@@ -279,11 +279,13 @@ def fig_discrimination(dis: Dict[str, Any], path: Path) -> None:
         ax.set_title(f"{t}: topo - best baseline {m['margin']:+.3f}\n"
                      f"CI [{m['ci95'][0]:+.3f}, {m['ci95'][1]:+.3f}]", fontsize=9)
         ax.set_xlabel("grouped-CV accuracy (dashed: majority class)")
-    for tier, col in (("topology", C_TOPO), ("baseline", C_BASE),
-                      ("union / incremental", C_UNION)):
-        axes[0, -1].barh([], [], color=col, label=tier)
-    axes[0, -1].legend(fontsize=7, loc="lower right")
-    fig.suptitle("Exp 2 - representation discrimination (groups = training runs)", fontsize=10)
+    from matplotlib.patches import Patch
+    handles = [Patch(color=col, label=tier) for tier, col in
+               (("topology", C_TOPO), ("baseline", C_BASE), ("union / incremental", C_UNION))]
+    fig.legend(handles=handles, fontsize=8, loc="lower center", ncol=3,
+               bbox_to_anchor=(0.5, -0.04))
+    fig.suptitle("Exp 2 - representation discrimination (groups = training runs; "
+                 "dotted: baselines_union)", fontsize=10)
     fig.tight_layout()
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
