@@ -1,0 +1,40 @@
+# Smoke configuration: a few tiny runs, ~1-2 min on 2 CPU cores, used by CI.
+# It exercises every code path (training, features, both experiments, report,
+# figures). Its numbers are NOT results.
+seed: 0
+n_workers: 2
+cache_dir: data/cache_smoke
+out_dir: results/smoke
+ops: [add, sub]
+seeds: [0, 1]
+training:
+  p: 23
+  train_frac: 0.75
+  d_model: 32
+  n_heads: 4
+  d_mlp: 128
+  n_layers: 1
+  lr: 0.003
+  weight_decay: 1.0
+  n_steps: 1500
+  log_every: 30
+  n_probe: 256
+controls:
+  ops: [add]
+  seeds: [0]
+  overrides:
+    weight_decay: 0.0
+descriptor:
+  theta: 0.40
+  max_n: 80
+  rips_dim: 15
+  n_pts: 50
+detection:
+  bootstrap: 200
+  n_estimators: 30
+discrimination:
+  n_splits: 2
+  n_repeats: 1
+  n_estimators: 30
+  max_ckpts_per_run: 12
+  bootstrap: 200
