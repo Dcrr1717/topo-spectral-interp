@@ -19,6 +19,10 @@ Verdicts:
 * incremental: baselines_union + topology vs baselines_union;
 * headroom = 1 - acc(baselines_union); if < go_margin a GO over the union is
   arithmetically impossible.
+
+``epoch`` (the training step alone) is shown as a trivial reference. It is not
+in any pool, but it shows how much of a task is solvable by "how far into
+training" alone.
 """
 from __future__ import annotations
 
@@ -45,7 +49,7 @@ def build_samples(runs: List[RunFeatures], task: str, max_ckpts: int,
     """Feature matrices (one per feature set), labels and groups for a task."""
     rng = np.random.default_rng(seed)
     ops = sorted({r.meta["op"] for r in runs})
-    X: Dict[str, List[np.ndarray]] = {k: [] for k in FEATURE_SETS}
+    X: Dict[str, List[np.ndarray]] = {k: [] for k in list(FEATURE_SETS) + ["epoch"]}
     y: List[np.ndarray] = []
     g: List[np.ndarray] = []
     sites = runs[0].sites
@@ -80,6 +84,7 @@ def build_samples(runs: List[RunFeatures], task: str, max_ckpts: int,
             g.append(np.full(len(idx), gi))
             for name, (_, views, _) in FEATURE_SETS.items():
                 X[name].append(_site_features(rf, views, idx, j))
+            X["epoch"].append(rf.steps[idx][:, None].astype(float))
     class_names = {"layer": sites, "task": ops, "phase": ["memorized", "grokked"]}[task]
     return {"X": {k: np.vstack(v) for k, v in X.items()}, "y": np.concatenate(y),
             "groups": np.concatenate(g), "class_names": class_names}
@@ -102,7 +107,7 @@ def run_task(runs: List[RunFeatures], task: str, cfg: Dict[str, Any]) -> Dict[st
     if len(np.unique(y)) < 2 or len(np.unique(groups)) < 2:
         return {"status": "skipped: one class or one run"}
     res = {}
-    for name in FEATURE_SETS:
+    for name in list(FEATURE_SETS) + ["epoch"]:
         res[name] = evaluate_grouped(S["X"][name], y, groups, seed=seed,
                                      n_splits=int(ev.get("n_splits", 4)),
                                      n_repeats=int(ev.get("n_repeats", 3)),

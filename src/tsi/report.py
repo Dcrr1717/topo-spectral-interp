@@ -28,13 +28,19 @@ def _detection(det: Dict[str, Any]) -> List[str]:
           "95 % CI above 0, against the best single baseline or as an increment over "
           "`baselines_union`).", "",
           "| criterion | best topology | best baseline | topology - best baseline | verdict |"
-          " topology - union | incremental (union+topo - union) | verdict |",
+          " topology - union | incremental (best baseline + topo - best baseline) | verdict |",
           "|---|---|---|---|---|---|---|---|"]
     for crit, v in det["verdicts"].items():
         L.append(f"| {crit} ({v['metric']}) | {v['best_topology']} | {v['best_baseline']} | "
                  f"{_ci(v['topology_vs_best_baseline'])} | {v['verdict_vs_best_baseline']} | "
                  f"{_ci(v['topology_vs_union'])} | {v['incremental']['a']}: "
                  f"{_ci(v['incremental'])} | {v['verdict_incremental']} |")
+    L += ["", "Incremental = (best baseline + best topological view) vs the best baseline. "
+          "Secondary (not in the verdict): baselines_union + topology vs baselines_union:", ""]
+    for crit, v in det["verdicts"].items():
+        c = v["incremental_union"]
+        L.append(f"- {crit}: {c['a']} vs {c['b']}: {_ci(c)} "
+                 f"({v['verdict_incremental_union_secondary']})")
     L += ["", "Margins are oriented so that **positive = topology better** (smaller timing "
           "error, larger step R^2, larger early-warning R^2).", "",
           "### Change-point timing and cleanness (all sites concatenated)", "",
@@ -115,7 +121,8 @@ def _discrimination(dis: Dict[str, Any]) -> List[str]:
               f"majority rate {r['majority_rate']:.3f})", "",
               "| feature set | tier | accuracy | LogReg | RF | macro-F1 |", "|---|---|---|---|---|---|"]
         for k, v in sorted(r["table"].items(), key=lambda kv: -kv[1]["accuracy"]):
-            L.append(f"| {k} | {FEATURE_SETS[k][0]} | {v['accuracy']:.3f} | {v['logreg']:.3f} | "
+            tier = FEATURE_SETS[k][0] if k in FEATURE_SETS else "trivial reference"
+            L.append(f"| {k} | {tier} | {v['accuracy']:.3f} | {v['logreg']:.3f} | "
                      f"{v['rf']:.3f} | {v['f1_macro']:.3f} |")
     return L + [""]
 

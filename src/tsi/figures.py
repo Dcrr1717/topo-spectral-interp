@@ -38,6 +38,15 @@ plt.rcParams.update({"font.size": 9, "axes.spines.top": False, "axes.spines.righ
                      "legend.frameon": False})
 
 
+_PRETTY = {"x1": "X1", "x2": "X2", "x1x2": "X1+X2", "x3": "X3"}
+
+
+def pretty(name: str) -> str:
+    """Display name of a feature set ("x1x2" -> "X1+X2"; avoids the font's
+    "1x2" -> "1×2" ligature and matches the paper's notation)."""
+    return " + ".join(_PRETTY.get(p, p) for p in name.split("+"))
+
+
 def _norm(x: np.ndarray) -> np.ndarray:
     lo, hi = np.nanmin(x), np.nanmax(x)
     return (x - lo) / (hi - lo) if hi - lo > 1e-12 else np.zeros_like(x)
@@ -112,7 +121,7 @@ def fig_trajectory(runs: List[RunFeatures], det: Dict[str, Any], path: Path) -> 
                 continue
             from .changepoint import single_changepoint, step_projection
             tau, _ = single_changepoint(Z)
-            ax.plot(st[i0:], step_projection(Z, tau), color=col, label=name)
+            ax.plot(st[i0:], step_projection(Z, tau), color=col, label=pretty(name))
         ta = rf.curves["test_acc"][i0:]
         ax.plot(st[i0:], _norm(ta), color=C_TEXT, lw=1, ls="--", label="held-out acc (scaled)")
         ax.set_xlabel("training step")
@@ -122,9 +131,10 @@ def fig_trajectory(runs: List[RunFeatures], det: Dict[str, Any], path: Path) -> 
                 axes[r, c].set_ylabel(rows[r], fontsize=8)
             if c == len(reps) - 1:
                 axes[r, c].legend(fontsize=7, loc="center left", bbox_to_anchor=(1.0, 0.5))
-    fig.suptitle("Descriptor trajectories through training. Dashed gray: memorization "
-                 "(train acc >= 0.99); red line: change point of held-out accuracy; "
-                 "red dotted: held-out acc >= 0.9. Rows 2-4 min-max scaled.", fontsize=9)
+    fig.suptitle("Descriptor trajectories through training (one run per operation)\n"
+                 "dashed gray: memorization (train acc >= 0.99); red line: change point of "
+                 "held-out accuracy; red dotted: held-out acc >= 0.9; rows 2-4 min-max scaled",
+                 fontsize=9)
     fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(path, dpi=130, bbox_inches="tight")
     plt.close(fig)
@@ -192,7 +202,7 @@ def fig_detection(det: Dict[str, Any], path: Path) -> None:
         ax.scatter([np.mean(data[i])], [k], color=col, marker="|", s=250)
     ax.axvline(det["prior_detector"]["mean_abs_nlag"], color=C_MUTED, ls=":", lw=1)
     ax.set_yticks(range(len(names)))
-    ax.set_yticklabels([names[i] for i in order], fontsize=8)
+    ax.set_yticklabels([pretty(names[i]) for i in order], fontsize=8)
     ax.invert_yaxis()
     ax.set_xlabel("|change point - held-out-acc change point| / window (dots = runs, bar = mean)"
                   "\ndotted: trivial prior detector")
@@ -206,7 +216,7 @@ def fig_detection(det: Dict[str, Any], path: Path) -> None:
         ax.barh(y + 0.2, [ctrl[names[i]] for i in order], height=0.38, color=C_REF,
                 label="non-grokking controls")
     ax.set_yticks(y)
-    ax.set_yticklabels([names[i] for i in order], fontsize=8)
+    ax.set_yticklabels([pretty(names[i]) for i in order], fontsize=8)
     ax.invert_yaxis()
     ax.set_xlabel("step R^2 (1 = perfect single step)")
     ax.set_title("Cleanness of the transition and specificity")
@@ -238,7 +248,7 @@ def fig_confusion(dis: Dict[str, Any], path: Path) -> None:
                     ax.text(b, a, f"{cmn[a, b]:.2f}", ha="center", va="center", fontsize=7,
                             color="white" if cmn[a, b] > 0.6 else C_TEXT)
             acc = r["table"][name]["accuracy"]
-            ax.set_title(f"{t}: {name} (acc {acc:.3f})", fontsize=9)
+            ax.set_title(f"{t}: {pretty(name)} (acc {acc:.3f})", fontsize=9)
             ax.set_xlabel("predicted")
             ax.set_ylabel("true")
     fig.suptitle("Exp 2 - grouped-CV confusion matrices (row-normalised, first repeat)",
@@ -262,7 +272,7 @@ def fig_discrimination(dis: Dict[str, Any], path: Path) -> None:
         ax.axvline(r["table"]["baselines_union"]["accuracy"], color=C_UNION, ls=":", lw=1)
         ax.axvline(r["majority_rate"], color=C_MUTED, ls="--", lw=1)
         ax.set_yticks(range(len(names)))
-        ax.set_yticklabels(names if i == 0 else [], fontsize=8)
+        ax.set_yticklabels([pretty(n) for n in names] if i == 0 else [], fontsize=8)
         ax.invert_yaxis()
         ax.set_xlim(0, 1.0)
         m = r["topology_vs_best_baseline"]
@@ -321,6 +331,7 @@ def fig_activation_topology(runs: List[RunFeatures], path: Path) -> None:
         ax.set_ylabel("death")
         ax.set_title("Vietoris-Rips persistence diagram (X2 input)", fontsize=9)
         ax.legend(fontsize=7, loc="lower right")
+    fig.subplots_adjust(hspace=0.38)
     fig.colorbar(sc, ax=axes[0, :].tolist(), label="answer c")
     fig.suptitle(f"Activation cloud before vs after grokking ({rf.meta['op']}, "
                  f"seed {rf.meta['seed']})", fontsize=10)
