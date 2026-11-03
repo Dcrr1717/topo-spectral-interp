@@ -7,7 +7,7 @@ import numpy as np
 
 from tsi.exp_detection import run_detection
 from tsi.exp_discrimination import run_discrimination
-from tsi.features import FEATURE_NAMES, RunFeatures
+from tsi.features import FEATURE_NAMES, MODEL_LEVEL, RunFeatures
 from tsi.featuresets import phase_labels, run_phases
 from tsi.figures import make_figures
 from tsi.report import write_report
@@ -26,11 +26,11 @@ def fake_run(op: str, seed: int, t_grok: int, kind: str = "grok", T: int = 60) -
         np.full(T, 0.03)
     feats = {}
     for v, names in FEATURE_NAMES.items():
-        S = 1 if v == "weight_norm" else len(SITES)
+        S = 1 if v in MODEL_LEVEL else len(SITES)
         base = rng.standard_normal((1, S, len(names)))
         sig = 4.0 * step_fn[:, None, None] if v in ("x1", "x2", "x3") else \
             np.linspace(0, 1, T)[:, None, None]
-        site_offset = np.arange(S)[None, :, None] * (6.0 if v != "weight_norm" else 0.0)
+        site_offset = np.arange(S)[None, :, None] * (0.0 if v in MODEL_LEVEL else 6.0)
         task_offset = 0.5 * ["add", "sub", "mul"].index(op)
         feats[v] = base + sig + site_offset + task_offset + \
             0.05 * rng.standard_normal((T, S, len(names)))

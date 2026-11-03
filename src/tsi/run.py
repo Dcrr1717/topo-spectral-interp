@@ -59,7 +59,7 @@ def run_configs(cfg: Dict[str, Any]) -> List[RunConfig]:
 
 
 def _key(rc: RunConfig, dc: DescriptorConfig) -> str:
-    blob = json.dumps({"run": rc.to_dict(), "desc": dc.__dict__, "v": 1}, sort_keys=True)
+    blob = json.dumps({"run": rc.to_dict(), "desc": dc.__dict__, "v": 2}, sort_keys=True)
     return hashlib.sha1(blob.encode()).hexdigest()[:12]
 
 

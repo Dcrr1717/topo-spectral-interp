@@ -56,6 +56,10 @@ def test_train_run_and_features_roundtrip(tmp_path: Path) -> None:
     assert rf.feats["x1"].shape == (5, 4, 10)
     assert rf.feats["x2"].shape == (5, 4, 12)
     assert rf.feats["weight_norm"].shape == (5, 1, 5)
+    assert rf.feats["restricted_loss"].shape == (5, 1, 1)
+    assert rf.feats["excluded_loss"].shape == (5, 1, 1)
+    assert rec.logits.shape == (5, 49, 7) and rec.is_train.sum() == round(0.6 * 49)
+    assert 1 <= len(rf.meta["fourier_keys"]) <= 8
     np.testing.assert_allclose(rf.feats["cka_final"][-1, :, 0], 1.0, atol=1e-6)
     path = tmp_path / "run.npz"
     save_run_features(rf, str(path))

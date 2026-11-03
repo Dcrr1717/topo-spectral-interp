@@ -13,9 +13,10 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .features import RunFeatures
+from .features import MODEL_LEVEL, RunFeatures
 
-UNION_VIEWS = ["act_stats", "pca_stats", "weight_norm", "cka_final", "probe_acc"]
+UNION_VIEWS = ["act_stats", "pca_stats", "weight_norm", "cka_final", "probe_acc",
+               "restricted_loss", "excluded_loss"]
 
 FEATURE_SETS: Dict[str, Tuple[str, List[str], str]] = {
     "x1": ("topology", ["x1"], "X1 functional graph of the units (|Pearson| > 0.40), R^10"),
@@ -28,6 +29,14 @@ FEATURE_SETS: Dict[str, Tuple[str, List[str], str]] = {
     "weight_norm": ("baseline", ["weight_norm"], "parameter norms (total and per component)"),
     "cka_final": ("baseline", ["cka_final"], "linear CKA to the final-model representation"),
     "probe_acc": ("baseline", ["probe_acc"], "linear-probe accuracy for the answer c"),
+    "restricted_loss": ("baseline", ["restricted_loss"],
+                        "Fourier restricted loss (Nanda et al. 2023): train loss with only the "
+                        "key-frequency logit components (log10)"),
+    "excluded_loss": ("baseline", ["excluded_loss"],
+                      "Fourier excluded loss (Nanda et al. 2023): train loss with the "
+                      "key-frequency logit components removed (log10)"),
+    "fourier_losses": ("baseline", ["restricted_loss", "excluded_loss"],
+                       "restricted + excluded loss"),
     "baselines_union": ("union", UNION_VIEWS, "all baselines concatenated"),
     "baselines_union+x1x2": ("incremental", UNION_VIEWS + ["x1", "x2"],
                              "baselines_union + X1 + X2"),
@@ -40,12 +49,13 @@ INCREMENTAL = [k for k, v in FEATURE_SETS.items() if v[0] == "incremental"]
 
 def signal_matrix(rf: RunFeatures, views: List[str], site: str) -> np.ndarray:
     """(T, d) matrix of the given views at one site (``"all"`` concatenates
-    every site). ``weight_norm`` is site-independent and enters once."""
+    every site). Model-level views (weight norm, Fourier losses) are
+    site-independent and enter once."""
     T = len(rf.steps)
     cols = []
     for v in views:
         arr = rf.feats[v]
-        if v == "weight_norm":
+        if v in MODEL_LEVEL:
             cols.append(arr[:, 0])
         elif site == "all":
             cols.append(arr.reshape(T, -1))

@@ -68,10 +68,11 @@ class RunRecord:
     probe_labels: np.ndarray
     probe_is_train: np.ndarray
     sites: List[str] = field(default_factory=list)
+    logits: np.ndarray = field(default_factory=lambda: np.zeros(0))  # (T, n_pairs, p)
+    is_train: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=bool))
 
 
-def _evaluate(model: Transformer, X: torch.Tensor, Y: torch.Tensor) -> tuple[float, float]:
-    logits = model(X)
+def _metrics(logits: torch.Tensor, Y: torch.Tensor) -> tuple[float, float]:
     return (float(F.cross_entropy(logits, Y)),
             float((logits.argmax(dim=1) == Y).float().mean()))
 
@@ -87,7 +88,7 @@ def train_run(cfg: RunConfig, verbose: bool = False) -> RunRecord:
     X = torch.from_numpy(ds.tokens)
     Y = torch.from_numpy(ds.labels)
     tr, te = torch.from_numpy(ds.train_idx), torch.from_numpy(ds.test_idx)
-    Xtr, Ytr, Xte, Yte = X[tr], Y[tr], X[te], Y[te]
+    Xtr, Ytr, Yte = X[tr], Y[tr], Y[te]
     pidx = probe_indices(ds, cfg.n_probe, cfg.seed)
     Xp = X[torch.from_numpy(pidx)]
     sites = site_names(cfg.n_layers)
@@ -96,15 +97,18 @@ def train_run(cfg: RunConfig, verbose: bool = False) -> RunRecord:
                                  ("steps", "train_loss", "test_loss", "train_acc", "test_acc",
                                   "weight_norm")}
     acts: Dict[str, List[np.ndarray]] = {s: [] for s in sites}
+    all_logits: List[np.ndarray] = []  # logits on every pair (Fourier progress measures)
 
     def checkpoint(step: int) -> None:
         model.eval()
         with torch.no_grad():
-            trl, tra = _evaluate(model, Xtr, Ytr)
-            tel, tea = _evaluate(model, Xte, Yte)
+            logits = model(X)
+            trl, tra = _metrics(logits[tr], Ytr)
+            tel, tea = _metrics(logits[te], Yte)
             cache: Dict[str, torch.Tensor] = {}
             model(Xp, cache=cache)
         model.train()
+        all_logits.append(logits.numpy().astype(np.float32))
         wn = weight_norms(model)
         log["steps"].append(step)
         log["train_loss"].append(trl)
@@ -140,4 +144,4 @@ def train_run(cfg: RunConfig, verbose: bool = False) -> RunRecord:
         weight_norm=np.asarray(log["weight_norm"]),
         acts={s: np.stack(v) for s, v in acts.items()},
         probe_idx=pidx, probe_labels=ds.labels[pidx], probe_is_train=is_train[pidx],
-        sites=sites)
+        sites=sites, logits=np.stack(all_logits), is_train=is_train)

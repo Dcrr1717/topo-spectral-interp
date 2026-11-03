@@ -31,7 +31,7 @@ from typing import Any, Dict, List
 import numpy as np
 
 from .evaluation import evaluate_grouped, paired_bootstrap_margin
-from .features import RunFeatures
+from .features import MODEL_LEVEL, RunFeatures
 from .featuresets import (BASELINES, FEATURE_SETS, INCREMENTAL, TOPOLOGY, phase_labels,
                           run_phases)
 
@@ -40,7 +40,7 @@ def _site_features(rf: RunFeatures, views: List[str], t: np.ndarray, j: int) -> 
     cols = []
     for v in views:
         arr = rf.feats[v]
-        cols.append(arr[t, 0] if v == "weight_norm" else arr[t, j])
+        cols.append(arr[t, 0] if v in MODEL_LEVEL else arr[t, j])
     return np.hstack(cols)
 
 

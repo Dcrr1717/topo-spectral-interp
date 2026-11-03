@@ -43,7 +43,7 @@ import numpy as np
 from .changepoint import detect
 from .evaluation import (bootstrap_mean_diff, evaluate_grouped_regression,
                          paired_bootstrap_r2)
-from .features import RunFeatures
+from .features import MODEL_LEVEL, RunFeatures
 from .featuresets import (BASELINES, FEATURE_SETS, INCREMENTAL, TOPOLOGY, run_phases,
                           signal_matrix)
 
@@ -55,7 +55,7 @@ def _window_signals(rf: RunFeatures, i0: int) -> Dict[str, Dict[str, np.ndarray]
     out: Dict[str, Dict[str, np.ndarray]] = {}
     for name, (_, views, _) in FEATURE_SETS.items():
         out[name] = {"all": signal_matrix(rf, views, "all")[i0:]}
-        if views != ["weight_norm"]:
+        if not all(v in MODEL_LEVEL for v in views):
             for s in rf.sites:
                 out[name][s] = signal_matrix(rf, views, s)[i0:]
     for c in REFERENCE_SIGNALS:

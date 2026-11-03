@@ -82,8 +82,8 @@ def fig_trajectory(runs: List[RunFeatures], det: Dict[str, Any], path: Path) -> 
         return
     det_runs = {r["run_id"]: r for r in det.get("runs", [])}
     rows = ["accuracy", "X1 functional graph (mlp)", "X2 Rips PH (resid_post)",
-            "baselines", "change-point projection"]
-    fig, axes = plt.subplots(len(rows), len(reps), figsize=(4.2 * len(reps), 11),
+            "baselines", "Fourier losses (log10)", "change-point projection"]
+    fig, axes = plt.subplots(len(rows), len(reps), figsize=(4.2 * len(reps), 13),
                              squeeze=False, sharex="col")
     for c, rf in enumerate(reps):
         st = rf.steps
@@ -113,6 +113,15 @@ def fig_trajectory(runs: List[RunFeatures], det: Dict[str, Any], path: Path) -> 
         ax.plot(st, _norm(rf.feats["pca_stats"][:, rf.sites.index(mlp), 0]), color=SERIES[3],
                 label="PCA part. ratio (mlp)")
         ax = axes[4, c]
+        if "restricted_loss" in rf.feats:
+            ax.plot(st, rf.feats["restricted_loss"][:, 0, 0], color=SERIES[0],
+                    label="restricted loss (train)")
+            ax.plot(st, rf.feats["excluded_loss"][:, 0, 0], color=SERIES[1],
+                    label="excluded loss (train)")
+            ax.plot(st, np.log10(rf.curves["test_loss"] + 1e-12), color=C_TEXT, lw=1, ls="--",
+                    label="held-out loss")
+            ax.set_title(f"key freqs {rf.meta.get('fourier_keys')}", fontsize=8)
+        ax = axes[5, c]
         ph = run_phases(rf)
         i0 = ph.i_mem or 0
         for name, col in (("x1x2", C_TOPO), ("baselines_union", C_UNION), ("cka_final", C_BASE)):

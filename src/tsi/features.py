@@ -12,6 +12,8 @@ baselines (``tsi.baselines``)
   ``cka_final``  linear CKA to the same site of the final checkpoint (R^1)
   ``probe_acc``  2-fold linear-probe accuracy for the answer c (R^1)
   ``weight_norm`` parameter norms, the same for every site (R^5)
+  ``restricted_loss`` / ``excluded_loss``  Fourier progress measures of Nanda
+                 et al. (2023), log10, model-level (``tsi.fourier``)
 training curves (reference only, never used as a predictor of the labels
 they define): train / held-out loss and accuracy.
 """
@@ -26,6 +28,9 @@ from .baselines import (ACT_STAT_NAMES, PCA_STAT_NAMES, activation_stats, linear
                         linear_probe_accuracy, pca_stats)
 from .descriptor.authentic import X1_NAMES, X2_NAMES, desc_x3, graph_invariants, \
     x2_rips_pointcloud
+from .data import make_dataset
+from .fourier import (group_view, key_frequencies, offset_profile, frequency_energy,
+                      restricted_excluded_loss)
 from .train import WEIGHT_NORM_NAMES, RunRecord
 
 FEATURE_NAMES: Dict[str, List[str]] = {
@@ -37,7 +42,11 @@ FEATURE_NAMES: Dict[str, List[str]] = {
     "cka_final": ["cka_to_final"],
     "probe_acc": ["linear_probe_acc"],
     "weight_norm": [f"wnorm_{n}" for n in WEIGHT_NORM_NAMES],
+    "restricted_loss": ["log10_restricted_loss"],
+    "excluded_loss": ["log10_excluded_loss"],
 }
+# model-level views: one value per checkpoint, shared by every site, shape (T, 1, d)
+MODEL_LEVEL = ["weight_norm", "restricted_loss", "excluded_loss"]
 SITE_VIEWS = ["x1", "x2", "x3", "act_stats", "pca_stats", "cka_final", "probe_acc"]
 
 
@@ -50,6 +59,8 @@ class DescriptorConfig:
     n_pts: int = 50
     probe_alpha: float = 1.0
     n_snapshots: int = 6  # checkpoints whose first n_pts activations are kept for figures
+    fourier_energy_frac: float = 0.9  # key frequencies: >= this share of logit energy
+    fourier_max_keys: int = 8
 
 
 @dataclass
@@ -60,7 +71,7 @@ class RunFeatures:
     sites: List[str]
     steps: np.ndarray
     curves: Dict[str, np.ndarray]  # train/test loss/acc, (T,)
-    feats: Dict[str, np.ndarray]   # view -> (T, S, d); weight_norm -> (T, 1, 5)
+    feats: Dict[str, np.ndarray]   # view -> (T, S, d); model-level views -> (T, 1, d)
     snapshots: Dict[str, np.ndarray]  # site -> (n_snap, n_pts, units)
     snapshot_steps: np.ndarray
     snapshot_labels: np.ndarray  # answer c of the first n_pts probe inputs
@@ -89,15 +100,39 @@ def run_features(rec: RunRecord, dcfg: DescriptorConfig) -> RunFeatures:
                 a, rec.probe_labels, n_classes=p, alpha=dcfg.probe_alpha,
                 seed=rec.config.seed)
     out["weight_norm"] = rec.weight_norm[:, None, :].astype(np.float64)
+    fourier_meta = fourier_features(rec, dcfg, out)
     snap_t = snapshot_indices(rec.train_acc, rec.test_acc, dcfg.n_snapshots)
     snapshots = {s: rec.acts[s][snap_t, : dcfg.n_pts].astype(np.float32) for s in sites}
     curves = {"train_loss": rec.train_loss, "test_loss": rec.test_loss,
               "train_acc": rec.train_acc, "test_acc": rec.test_acc}
     meta = rec.config.to_dict()
     meta["probe_frac_train"] = float(rec.probe_is_train.mean())
+    meta.update(fourier_meta)
     return RunFeatures(meta=meta, sites=sites, steps=rec.steps, curves=curves, feats=out,
                        snapshots=snapshots, snapshot_steps=rec.steps[snap_t],
                        snapshot_labels=rec.probe_labels[: dcfg.n_pts])
+
+
+def fourier_features(rec: RunRecord, dcfg: DescriptorConfig,
+                     out: Dict[str, np.ndarray]) -> Dict[str, Any]:
+    """Restricted / excluded loss (Nanda et al. 2023) at every checkpoint, with
+    the key frequencies of the FINAL checkpoint (``tsi.fourier``). Fills
+    ``out`` in place and returns metadata (key frequencies, their energy)."""
+    T = len(rec.steps)
+    cfg = rec.config
+    ds = make_dataset(cfg.p, cfg.op, cfg.train_frac, cfg.seed)
+    gv = group_view(ds.tokens, ds.labels, cfg.op, cfg.p)
+    M = offset_profile(rec.logits[-1], gv)
+    keys = key_frequencies(M, dcfg.fourier_energy_frac, dcfg.fourier_max_keys)
+    E = frequency_energy(M)
+    r = np.zeros((T, 1, 1))
+    e = np.zeros((T, 1, 1))
+    for t in range(T):
+        rl, el = restricted_excluded_loss(rec.logits[t], gv, rec.is_train, keys)
+        r[t, 0, 0], e[t, 0, 0] = np.log10(rl + 1e-12), np.log10(el + 1e-12)
+    out["restricted_loss"], out["excluded_loss"] = r, e
+    return {"fourier_keys": keys,
+            "fourier_key_energy_frac": float(E[keys].sum() / max(E[1:].sum(), 1e-24))}
 
 
 def snapshot_indices(train_acc: np.ndarray, test_acc: np.ndarray, n: int) -> np.ndarray:
