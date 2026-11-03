@@ -32,15 +32,15 @@ Grokking runs: 11; controls (memorize, never grok): 3. Not grokked within budget
 
 | criterion | best topology | best baseline | topology - best baseline | verdict | topology - union | incremental (best baseline + topo - best baseline) | verdict |
 |---|---|---|---|---|---|---|---|
-| timing (mean_abs_nlag) | x3 | cka_final | +0.015 [-0.017, +0.052] | NO-GO | +0.032 [-0.005, +0.068] | cka_final+x3: +0.006 [-0.017, +0.028] | NO-GO |
-| cleanness (mean_r2_step) | x1 | probe_acc | -0.278 [-0.329, -0.229] | NO-GO | +0.038 [-0.000, +0.081] | probe_acc+x1: -0.261 [-0.308, -0.216] | NO-GO |
-| early_warning (out-of-fold R^2 (steps to grokking)) | x2 | weight_norm | -0.357 [-0.892, +0.649] | NO-GO | +0.343 [-0.306, +2.107] | weight_norm+x1: -0.427 [-1.204, +0.307] | NO-GO |
+| timing (mean_abs_nlag) | x3 | cka_final | +0.015 [-0.017, +0.052] | NO-GO | +0.031 [-0.007, +0.067] | cka_final+x3: +0.006 [-0.017, +0.028] | NO-GO |
+| cleanness (mean_r2_step) | x1 | probe_acc | -0.278 [-0.329, -0.229] | NO-GO | +0.048 [+0.011, +0.089] | probe_acc+x1: -0.261 [-0.308, -0.216] | NO-GO |
+| early_warning (out-of-fold R^2 (steps to grokking)) | x2 | restricted_loss | -0.640 [-1.146, +0.203] | NO-GO | -0.195 [-0.776, +0.401] | restricted_loss+x2: -0.569 [-1.096, +0.306] | NO-GO |
 
 Incremental = (best baseline + best topological view) vs the best baseline. Secondary (not in the verdict): baselines_union + topology vs baselines_union:
 
-- timing: baselines_union+x3 vs baselines_union: +0.027 [-0.004, +0.058] (NO-GO)
-- cleanness: baselines_union+x1x2 vs baselines_union: -0.071 [-0.086, -0.050] (NO-GO)
-- early_warning: baselines_union+epoch+x3 vs baselines_union+epoch: +0.080 [-0.289, +0.513] (NO-GO)
+- timing: baselines_union+x3 vs baselines_union: +0.025 [-0.006, +0.058] (NO-GO)
+- cleanness: baselines_union+x1x2 vs baselines_union: -0.064 [-0.079, -0.044] (NO-GO)
+- early_warning: baselines_union+epoch+x1x2 vs baselines_union+epoch: -0.184 [-0.382, +0.022] (NO-GO)
 
 Margins are oriented so that **positive = topology better** (smaller timing error, larger step R^2, larger early-warning R^2).
 
@@ -60,9 +60,12 @@ Margins are oriented so that **positive = topology better** (smaller timing erro
 | weight_norm | baseline | 0.097 | 0.077 | +0.048 | 0.09 | 0.524 | -0.002 | +0.026 |
 | cka_final | baseline | 0.083 | 0.088 | -0.014 | 0.36 | 0.753 | -0.015 | -0.014 |
 | probe_acc | baseline | 0.136 | 0.165 | +0.136 | 0.18 | 0.772 | +0.098 | +0.135 |
-| baselines_union | union | 0.100 | 0.088 | +0.100 | 0.18 | 0.456 | +0.051 | +0.100 |
-| baselines_union+x1x2 | incremental | 0.095 | 0.077 | +0.095 | 0.18 | 0.385 | +0.067 | +0.095 |
-| baselines_union+x3 | incremental | 0.074 | 0.051 | +0.073 | 0.36 | 0.372 | +0.037 | +0.072 |
+| restricted_loss | baseline | 0.184 | 0.108 | +0.110 | 0.36 | 0.318 | -0.069 | -0.099 |
+| excluded_loss | baseline | 0.384 | 0.320 | +0.270 | 0.00 | 0.329 | -0.106 | -0.158 |
+| fourier_losses | baseline | 0.324 | 0.197 | +0.205 | 0.09 | 0.289 | -0.093 | -0.051 |
+| baselines_union | union | 0.099 | 0.082 | +0.099 | 0.18 | 0.446 | +0.049 | +0.099 |
+| baselines_union+x1x2 | incremental | 0.095 | 0.077 | +0.095 | 0.18 | 0.382 | +0.071 | +0.095 |
+| baselines_union+x3 | incremental | 0.074 | 0.051 | +0.073 | 0.27 | 0.369 | +0.037 | +0.073 |
 | test_loss | reference (label-adjacent) | 0.144 | 0.119 | +0.144 | 0.09 | 0.704 | +0.123 | +0.135 |
 | train_loss | reference (label-adjacent) | 0.269 | 0.138 | -0.096 | 0.18 | 0.128 | -0.131 | -0.145 |
 | prior (leave-one-run-out mean position) | trivial | 0.176 | 0.131 | | | | | |
@@ -80,9 +83,9 @@ Margins are oriented so that **positive = topology better** (smaller timing erro
 | act_pca | 0.115 / 0.52 | 0.131 / 0.43 | 0.190 / 0.43 | 0.132 / 0.41 |
 | cka_final | 0.051 / 0.80 | 0.067 / 0.82 | 0.115 / 0.80 | 0.188 / 0.75 |
 | probe_acc | 0.276 / 0.00 | 0.174 / 0.77 | 0.150 / 0.80 | 0.115 / 0.83 |
-| baselines_union | 0.095 / 0.52 | 0.091 / 0.47 | 0.101 / 0.45 | 0.101 / 0.45 |
-| baselines_union+x1x2 | 0.086 / 0.42 | 0.101 / 0.45 | 0.131 / 0.40 | 0.109 / 0.37 |
-| baselines_union+x3 | 0.105 / 0.38 | 0.098 / 0.45 | 0.124 / 0.38 | 0.148 / 0.39 |
+| baselines_union | 0.085 / 0.48 | 0.091 / 0.44 | 0.098 / 0.43 | 0.098 / 0.42 |
+| baselines_union+x1x2 | 0.093 / 0.41 | 0.100 / 0.44 | 0.128 / 0.39 | 0.110 / 0.36 |
+| baselines_union+x3 | 0.104 / 0.37 | 0.100 / 0.44 | 0.125 / 0.37 | 0.146 / 0.38 |
 
 ### Early warning: steps remaining until grokking (plateau checkpoints)
 
@@ -90,24 +93,27 @@ Margins are oriented so that **positive = topology better** (smaller timing erro
 
 | feature set | out-of-fold R^2 | MAE (steps) | model |
 |---|---|---|---|
+| restricted_loss | 0.200 | 921 | ridge |
 | weight_norm | -0.083 | 983 | rf |
+| fourier_losses | -0.106 | 1041 | ridge |
 | epoch | -0.209 | 1152 | ridge |
+| baselines_union+epoch | -0.245 | 930 | rf |
+| baselines_union | -0.257 | 953 | rf |
+| restricted_loss+x2 | -0.369 | 1056 | rf |
+| excluded_loss | -0.421 | 1203 | ridge |
+| baselines_union+epoch+x1x2 | -0.429 | 1027 | rf |
+| baselines_union+x1x2 | -0.434 | 1025 | rf |
 | x2 | -0.440 | 1125 | rf |
 | x1x2 | -0.462 | 1127 | rf |
 | act_stats | -0.472 | 1071 | rf |
-| weight_norm+x1 | -0.510 | 1163 | rf |
-| weight_norm+x2 | -0.537 | 1160 | rf |
+| restricted_loss+x1x2 | -0.558 | 1120 | rf |
 | probe_acc | -0.568 | 1206 | rf |
-| weight_norm+x1x2 | -0.642 | 1183 | rf |
-| baselines_union+x3 | -0.693 | 1208 | rf |
-| baselines_union+epoch+x3 | -0.703 | 1209 | rf |
 | act_pca | -0.718 | 1218 | rf |
 | x1 | -0.764 | 1245 | rf |
-| baselines_union+epoch | -0.783 | 1251 | rf |
-| baselines_union | -0.805 | 1262 | rf |
-| baselines_union+epoch+x1x2 | -0.865 | 1285 | rf |
-| baselines_union+x1x2 | -0.888 | 1294 | rf |
-| weight_norm+x3 | -0.892 | 1335 | rf |
+| restricted_loss+x1 | -0.767 | 1235 | rf |
+| baselines_union+epoch+x3 | -0.773 | 1297 | rf |
+| baselines_union+x3 | -0.795 | 1308 | rf |
+| restricted_loss+x3 | -0.967 | 1417 | rf |
 | x3 | -0.987 | 1388 | rf |
 | pca_stats | -1.020 | 1314 | rf |
 | cka_final | -1.440 | 1595 | rf |
@@ -128,9 +134,12 @@ Controls: control_add_s0, control_sub_s0, control_div_s0. A signal specific to g
 | weight_norm | 0.524 | 0.675 |
 | cka_final | 0.753 | 0.628 |
 | probe_acc | 0.772 | 0.416 |
-| baselines_union | 0.456 | 0.590 |
-| baselines_union+x1x2 | 0.385 | 0.463 |
-| baselines_union+x3 | 0.372 | 0.447 |
+| restricted_loss | 0.318 | 0.692 |
+| excluded_loss | 0.329 | 0.680 |
+| fourier_losses | 0.289 | 0.685 |
+| baselines_union | 0.446 | 0.593 |
+| baselines_union+x1x2 | 0.382 | 0.466 |
+| baselines_union+x3 | 0.369 | 0.451 |
 | test_loss | 0.704 | 0.679 |
 | train_loss | 0.128 | 0.257 |
 
@@ -156,19 +165,19 @@ Controls: control_add_s0, control_sub_s0, control_div_s0. A signal specific to g
 
 | task | n / runs | best topology | best baseline | topology - best baseline | verdict | topology - union | headroom | incremental | verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| layer | 1760 / 11 | x1x2 0.890 | act_stats 0.977 | -0.087 [-0.162, -0.011] | NO-GO | -0.083 [-0.166, +0.005] | 0.027 | baselines_union+x3: +0.018 [-0.021, +0.075] | NO-GO |
-| task | 1760 / 11 | x1x2 0.612 | act_pca 0.657 | -0.045 [-0.138, +0.041] | NO-GO | -0.076 [-0.139, -0.013] | 0.312 | baselines_union+x1x2: -0.026 [-0.085, +0.019] | NO-GO |
-| phase | 1600 / 11 | x1 0.852 | weight_norm 0.953 | -0.101 [-0.165, -0.045] | NO-GO | -0.116 [-0.174, -0.062] | 0.033 | baselines_union+x1x2: +0.010 [+0.000, +0.022] | NO-GO |
+| layer | 1760 / 11 | x1x2 0.890 | act_stats 0.977 | -0.087 [-0.162, -0.011] | NO-GO | -0.084 [-0.168, +0.003] | 0.026 | baselines_union+x1x2: +0.017 [-0.024, +0.075] | NO-GO |
+| task | 1760 / 11 | x1x2 0.612 | fourier_losses 0.836 | -0.225 [-0.331, -0.133] | NO-GO | -0.192 [-0.328, -0.075] | 0.196 | baselines_union+x3: -0.003 [-0.049, +0.044] | NO-GO |
+| phase | 1600 / 11 | x1 0.852 | weight_norm 0.953 | -0.101 [-0.165, -0.045] | NO-GO | -0.120 [-0.175, -0.068] | 0.028 | baselines_union+x1x2: +0.015 [+0.000, +0.034] | NO-GO |
 
 ### Task `layer` (4 classes: embed, resid_mid_0, mlp_0, resid_post_0; majority rate 0.250)
 
 | feature set | tier | accuracy | LogReg | RF | macro-F1 |
 |---|---|---|---|---|---|
+| baselines_union+x1x2 | incremental | 0.991 | 0.991 | 0.974 | 0.991 |
 | baselines_union+x3 | incremental | 0.991 | 0.991 | 0.973 | 0.991 |
-| baselines_union+x1x2 | incremental | 0.990 | 0.990 | 0.976 | 0.990 |
 | act_stats | baseline | 0.977 | 0.949 | 0.977 | 0.977 |
 | act_pca | baseline | 0.975 | 0.897 | 0.975 | 0.975 |
-| baselines_union | union | 0.973 | 0.951 | 0.973 | 0.973 |
+| baselines_union | union | 0.974 | 0.949 | 0.974 | 0.974 |
 | x1x2 | topology | 0.890 | 0.890 | 0.862 | 0.890 |
 | x3 | topology | 0.819 | 0.789 | 0.819 | 0.819 |
 | probe_acc | baseline | 0.641 | 0.641 | 0.557 | 0.630 |
@@ -177,20 +186,26 @@ Controls: control_add_s0, control_sub_s0, control_div_s0. A signal specific to g
 | pca_stats | baseline | 0.513 | 0.491 | 0.513 | 0.511 |
 | cka_final | baseline | 0.278 | 0.278 | 0.255 | 0.208 |
 | weight_norm | baseline | 0.250 | 0.250 | 0.250 | 0.100 |
+| restricted_loss | baseline | 0.250 | 0.250 | 0.250 | 0.100 |
+| excluded_loss | baseline | 0.250 | 0.250 | 0.250 | 0.100 |
+| fourier_losses | baseline | 0.250 | 0.250 | 0.250 | 0.100 |
 | epoch | trivial reference | 0.250 | 0.250 | 0.250 | 0.100 |
 
 ### Task `task` (3 classes: add, div, sub; majority rate 0.364)
 
 | feature set | tier | accuracy | LogReg | RF | macro-F1 |
 |---|---|---|---|---|---|
-| baselines_union | union | 0.688 | 0.688 | 0.655 | 0.638 |
-| baselines_union+x1x2 | incremental | 0.662 | 0.662 | 0.657 | 0.625 |
-| baselines_union+x3 | incremental | 0.661 | 0.661 | 0.661 | 0.591 |
+| fourier_losses | baseline | 0.836 | 0.767 | 0.836 | 0.812 |
+| baselines_union | union | 0.804 | 0.716 | 0.804 | 0.787 |
+| baselines_union+x3 | incremental | 0.801 | 0.706 | 0.801 | 0.777 |
+| baselines_union+x1x2 | incremental | 0.771 | 0.710 | 0.771 | 0.734 |
+| excluded_loss | baseline | 0.708 | 0.708 | 0.598 | 0.660 |
 | act_pca | baseline | 0.657 | 0.657 | 0.589 | 0.616 |
 | epoch | trivial reference | 0.624 | 0.364 | 0.624 | 0.592 |
 | x1x2 | topology | 0.612 | 0.612 | 0.590 | 0.564 |
 | x3 | topology | 0.606 | 0.561 | 0.606 | 0.536 |
 | weight_norm | baseline | 0.596 | 0.489 | 0.596 | 0.556 |
+| restricted_loss | baseline | 0.589 | 0.589 | 0.527 | 0.475 |
 | x2 | topology | 0.580 | 0.580 | 0.521 | 0.524 |
 | x1 | topology | 0.562 | 0.538 | 0.562 | 0.525 |
 | act_stats | baseline | 0.521 | 0.467 | 0.521 | 0.500 |
@@ -202,9 +217,9 @@ Controls: control_add_s0, control_sub_s0, control_div_s0. A signal specific to g
 
 | feature set | tier | accuracy | LogReg | RF | macro-F1 |
 |---|---|---|---|---|---|
-| baselines_union+x1x2 | incremental | 0.977 | 0.977 | 0.971 | 0.977 |
-| baselines_union+x3 | incremental | 0.973 | 0.972 | 0.973 | 0.973 |
-| baselines_union | union | 0.967 | 0.967 | 0.967 | 0.967 |
+| baselines_union+x1x2 | incremental | 0.987 | 0.987 | 0.970 | 0.987 |
+| baselines_union+x3 | incremental | 0.974 | 0.974 | 0.966 | 0.973 |
+| baselines_union | union | 0.972 | 0.970 | 0.972 | 0.972 |
 | weight_norm | baseline | 0.953 | 0.953 | 0.943 | 0.953 |
 | epoch | trivial reference | 0.897 | 0.897 | 0.882 | 0.896 |
 | cka_final | baseline | 0.885 | 0.885 | 0.874 | 0.882 |
@@ -216,6 +231,9 @@ Controls: control_add_s0, control_sub_s0, control_div_s0. A signal specific to g
 | act_stats | baseline | 0.728 | 0.557 | 0.728 | 0.725 |
 | x2 | topology | 0.707 | 0.700 | 0.707 | 0.704 |
 | probe_acc | baseline | 0.673 | 0.617 | 0.673 | 0.666 |
+| fourier_losses | baseline | 0.641 | 0.641 | 0.513 | 0.636 |
+| restricted_loss | baseline | 0.592 | 0.592 | 0.472 | 0.592 |
+| excluded_loss | baseline | 0.571 | 0.571 | 0.487 | 0.556 |
 
 ## Feature sets
 
@@ -231,8 +249,11 @@ Controls: control_add_s0, control_sub_s0, control_div_s0. A signal specific to g
 | weight_norm | baseline | parameter norms (total and per component) |
 | cka_final | baseline | linear CKA to the final-model representation |
 | probe_acc | baseline | linear-probe accuracy for the answer c |
+| restricted_loss | baseline | Fourier restricted loss (Nanda et al. 2023): train loss with only the key-frequency logit components (log10) |
+| excluded_loss | baseline | Fourier excluded loss (Nanda et al. 2023): train loss with the key-frequency logit components removed (log10) |
+| fourier_losses | baseline | restricted + excluded loss |
 | baselines_union | union | all baselines concatenated |
 | baselines_union+x1x2 | incremental | baselines_union + X1 + X2 |
 | baselines_union+x3 | incremental | baselines_union + X3 |
 
-Runtime: runs 0 s, analysis 667 s.
+Runtime: runs 1630 s, analysis 497 s.
