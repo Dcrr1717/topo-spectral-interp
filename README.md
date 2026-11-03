@@ -18,8 +18,9 @@ activations (inputs x units).
 
 Two pre-registered Go/No-Go experiments compare it with strong baselines:
 CKA to the final representation (Kornblith et al. 2019), linear-probe
-accuracy, raw activation statistics with PCA effective dimension, and weight
-norm.
+accuracy, raw activation statistics with PCA effective dimension, weight
+norm, and the Fourier restricted / excluded loss progress measures of Nanda
+et al. (2023).
 
 1. **Grokking detection.** Does the descriptor locate the
    memorization -> generalization transition earlier, more accurately or more
@@ -88,6 +89,7 @@ src/tsi/
   train.py                 full-batch AdamW + weight decay; logs activations per site
   features.py              descriptor + baselines per (checkpoint, site)
   baselines.py             linear CKA, linear probe, activation / PCA statistics
+  fourier.py               Fourier restricted / excluded loss (Nanda et al. 2023)
   changepoint.py           label-free change-point and onset detector
   evaluation.py            grouped CV + paired run bootstrap (ported from GEM)
   exp_detection.py         Experiment 1

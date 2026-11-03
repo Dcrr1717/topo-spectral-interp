@@ -46,8 +46,13 @@ A tie is a valid, reportable outcome. The GEM benchmark already showed that
   generalizing models. If any representation change is topological, this one
   should be: circles (H1 classes) and periodic, strongly correlated neuron
   groups (dense functional-graph communities) should appear at grokking.
-- **Known progress measures to beat.** Weight norm falls steadily under weight
-  decay (Liu et al. 2023, "Omnigrok"; Nanda et al. 2023). The circuit forms
+- **Known progress measures to beat.** Nanda et al. (2023) introduced two
+  mechanism-aware progress measures. *Restricted loss* keeps only the
+  key-frequency part of the logits; it falls before held-out loss moves.
+  *Excluded loss* removes that part; it rises as the circuit takes over the
+  training set. Both are included here as baselines (section 5). Weight
+  norm falls steadily under weight decay (Liu et al. 2023, "Omnigrok";
+  Nanda et al. 2023). The circuit forms
   before held-out accuracy moves ("circuit formation", then "cleanup"; Nanda
   et al. 2023). CKA (Kornblith et al. 2019) and linear probes (Alain & Bengio
   2016) are the standard representation-level diagnostics.
@@ -140,7 +145,9 @@ not port it, so we port it from the same upstream module.
 
 ## 5. Baselines
 
-All are computed on the same activation matrices and the same checkpoints.
+All are computed at the same checkpoints. The first six use the same
+activation matrices as the descriptor. The Fourier losses use the model's
+logits.
 
 | baseline | definition |
 |---|---|
@@ -150,6 +157,9 @@ All are computed on the same activation matrices and the same checkpoints.
 | `pca_stats` | participation ratio, entropy effective rank, explained variance of the top 1 / 5 / 10 PCs |
 | `act_pca` | `act_stats` + `pca_stats` (the "raw activation statistics" of the brief) |
 | `weight_norm` | parameter L2 norms: embeddings, attention, MLP, unembedding, total |
+| `restricted_loss` | Fourier restricted loss (Nanda et al. 2023): log10 train loss when only the key-frequency components of the logits are kept |
+| `excluded_loss` | Fourier excluded loss (Nanda et al. 2023): log10 train loss when the key-frequency components are removed |
+| `fourier_losses` | `restricted_loss` + `excluded_loss` |
 | `baselines_union` | all of the above concatenated |
 
 `cka_final` is retrospective: it needs the final model, which a real-time
@@ -157,6 +167,37 @@ detector would not have. The descriptor needs only the current checkpoint.
 `probe_acc` decodes the answer, so on `resid_post_0` (which the unembedding
 reads linearly) it is close to a re-measurement of held-out accuracy itself.
 These are deliberately strong, label-adjacent baselines.
+
+**Fourier progress measures** (`src/tsi/fourier.py`). These are the
+mechanism-aware baselines: they measure the specific circuit grokked
+networks are known to use.
+
+- **The structure they test.** A grokked modular-addition network has logits
+  l(a, b, c) ~ sum_k alpha_k cos(w_k (a + b - c)) over a few key frequencies
+  (Nanda et al. 2023).
+- **Group coordinates.** Each operation is written as a cyclic group law
+  w(c) = u(a) +- v(b) mod n.
+  - `add` / `sub` use the identity coordinates with n = p.
+  - `div` uses discrete-log coordinates with n = p - 1. The multiplicative
+    group is cyclic, so its irreducible representations are Fourier
+    characters again (Chughtai et al. 2023). Pairs involving 0 are left out.
+- **Projection.** The key directions cos / sin(2 pi k (s - w(c)) / n) depend
+  on (pair, output) only through the offset d = s - w(c). On the complete
+  grid of pairs, the exact projection of the logits onto them is the mean
+  logit at each offset, filtered to the key frequencies.
+- **The two losses.** The *restricted* loss evaluates the train loss with
+  only that projection kept. The *excluded* loss evaluates it with the
+  projection removed.
+- **Key frequencies** come from the final checkpoint, as in Nanda et al.:
+  the smallest set holding >= 90 % of the non-constant logit energy, at
+  most 8.
+- **Labels.** Both losses are evaluated on training pairs only, so they use
+  no held-out labels. Like `cka_final`, they are retrospective, because the
+  key frequencies come from the final model.
+- **Sanity checks.** `tests/test_fourier.py` checks the group coordinates,
+  the recovery of planted key frequencies, and the limits: restricted loss
+  equals full loss when the logits are pure key components, and excluded
+  loss then equals log n.
 
 ## 6. Protocol
 
