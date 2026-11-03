@@ -1,0 +1,57 @@
+# Full configuration: the reported experiment (docs/RESULTS.md).
+# ~1 h on 4 CPU cores (15 runs x 6000 full-batch steps + features + analysis).
+seed: 0
+n_workers: 4
+cache_dir: data/cache_full
+out_dir: results
+ops: [add, sub, div]
+seeds: [0, 1, 2, 3]
+training:            # Nanda et al. (2023) one-layer recipe, p = 59
+  p: 59
+  train_frac: 0.5
+  d_model: 128
+  n_heads: 4
+  d_mlp: 512
+  n_layers: 1
+  lr: 0.001
+  weight_decay: 1.0
+  betas: [0.9, 0.98]
+  warmup_steps: 10
+  n_steps: 6000
+  log_every: 30
+  n_probe: 1024
+# Train fraction per operation, calibrated in pilot runs so that every
+# operation shows delayed generalization within 6000 steps (sub is slower
+# than add at equal fraction; div generalizes alongside memorization at 0.6
+# and too slowly at 0.5). This confounds `task` with train fraction in
+# Experiment 2 (documented in docs/RESULTS.md).
+op_overrides:
+  sub: {train_frac: 0.6}
+  div: {train_frac: 0.55}
+controls:            # memorize but (are expected to) never grok: no weight decay
+  ops: [add, sub, div]
+  seeds: [0]
+  overrides:
+    weight_decay: 0.0
+descriptor:          # authentic defaults (Reinoso & Escudero 2026)
+  theta: 0.40
+  max_n: 80
+  corr: pearson
+  rips_dim: 15
+  n_pts: 50
+  probe_alpha: 1.0
+  n_snapshots: 6
+detection:
+  min_seg: 2
+  smooth: 5
+  go_margin: 0.05
+  bootstrap: 2000
+  n_estimators: 200
+discrimination:
+  tasks: [layer, task, phase]
+  n_splits: 4
+  n_repeats: 3
+  n_estimators: 200
+  max_ckpts_per_run: 40
+  go_margin: 0.05
+  bootstrap: 2000

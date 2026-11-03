@@ -1,0 +1,49 @@
+# Smoke configuration: tiny runs (~1-3 min on 2 CPU cores), used by CI.
+# It exercises every code path (training, features, both experiments, report,
+# figures) on real, freshly trained models. Its numbers are NOT results:
+# p = 23 models only partially generalize (held-out ~0.6-0.8), so the phase
+# thresholds are lowered here; the full config uses the defaults
+# (0.99 / 0.5 / 0.9 / 0.95). With a single operation the `task` task of
+# Experiment 2 is skipped (it is covered by tests/test_experiments.py).
+seed: 0
+n_workers: 2
+cache_dir: data/cache_smoke
+out_dir: results/smoke
+ops: [add]
+seeds: [0, 1, 2]
+training:
+  p: 23
+  train_frac: 0.6
+  d_model: 32
+  n_heads: 4
+  d_mlp: 128
+  n_layers: 1
+  lr: 0.003
+  weight_decay: 1.0
+  n_steps: 1200
+  log_every: 20
+  n_probe: 256
+controls:
+  ops: [add]
+  seeds: [0]
+  overrides:
+    weight_decay: 0.0
+phases:
+  mem: 0.99
+  onset: 0.4
+  grok: 0.6
+  grokked_min: 0.6
+descriptor:
+  theta: 0.40
+  max_n: 80
+  rips_dim: 15
+  n_pts: 50
+detection:
+  bootstrap: 200
+  n_estimators: 30
+discrimination:
+  n_splits: 3
+  n_repeats: 1
+  n_estimators: 30
+  max_ckpts_per_run: 12
+  bootstrap: 200
